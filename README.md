@@ -12,7 +12,7 @@ see `Initializing a fresh instance` @ https://hub.docker.com/_/mysql/
 
 So let's run this initialization in a multi-stage build and copy the initialized DB in the new image :D
 
-(see comments in dockerfile for details of the hack) 
+(see comments in dockerfile for details of the hack)
 
 Try it!
 ======
@@ -44,3 +44,9 @@ Clone this, then...
 | Dolly   |
 +---------+
 ```
+
+additional sql can be initialised with the resulting image,
+via mounting sql files into /docker-entrypoint-initdb.d
+or preloading the generated image in the same way, using the previous image as a base
+>docker run -it --mount type=bind,source="$(pwd)/additional_sql",target=/docker-entrypoint-initdb.d \
+        my-prepopulated-image
