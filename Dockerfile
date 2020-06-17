@@ -1,15 +1,18 @@
-FROM mysql:5 as builder
+FROM mysql:5 as base
 
 # A an alternative entrypoint sourced from the original
 COPY entrypoint.sh /preloader_entrypoint.sh
 RUN chmod +x /preloader_entrypoint.sh
 ENTRYPOINT ["/preloader_entrypoint.sh"]
+ENV MYSQL_ROOT_PASSWORD rootpass
+# if your initdb does not create databases or users needed to start it,
+# define those here
+# ENV MYSQL_DATABASE app
+# ENV MYSQL_USER user
+# ENV MYSQL_PASSWORD pass
 
-# needed for intialization
-ENV MYSQL_DATABASE app
-ENV MYSQL_ROOT_PASSWORD=rootpass
-ENV MYSQL_USER 'user'
-ENV MYSQL_PASSWORD 'pass'
+
+FROM base as builder
 # set DONT_START_MYSQLD so that we can run it without starting the daemon
 ENV DONT_START_MYSQLD 'true'
 
@@ -22,15 +25,5 @@ COPY init_db/. /docker-entrypoint-initdb.d/.
 RUN ["./preloader_entrypoint.sh", "mysqld", "--datadir", "/initialized-db"]
 
 
-FROM mysql:5
-
-ENTRYPOINT ["/preloader_entrypoint.sh"]
-ENV MYSQL_DATABASE app
-ENV MYSQL_ROOT_PASSWORD=rootpass
-ENV MYSQL_USER 'user'
-ENV MYSQL_PASSWORD 'pass'
-COPY entrypoint.sh /preloader_entrypoint.sh
-RUN chmod +x /preloader_entrypoint.sh
-
-
+FROM base
 COPY --from=builder /initialized-db /var/lib/mysql
