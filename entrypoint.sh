@@ -23,28 +23,30 @@ _main() {
 			exec gosu mysql "$BASH_SOURCE" "$@"
 		fi
 
-		# there's no database, so it needs to be initialized
-        docker_verify_minimum_env
+        if [ ! -z "$(ls /docker-entrypoint-initdb.d/)" ] || [ -z "$DATABASE_ALREADY_EXISTS" ]; then
+            # there's no database or there are initdb files to process
+            docker_verify_minimum_env
 
-        # check dir permissions to reduce likelihood of half-initialized database
-        ls /docker-entrypoint-initdb.d/ > /dev/null
+            # check dir permissions to reduce likelihood of half-initialized database
+            ls /docker-entrypoint-initdb.d/ > /dev/null
 
-        [ -z "$DATABASE_ALREADY_EXISTS" ] && docker_init_database_dir "$@" || mysql_note "Skipping docker_init_database_dir"
-        mysql_note "Starting temporary server"
-        docker_temp_server_start "$@"
-        mysql_note "Temporary server started."
-        [ -z "$DATABASE_ALREADY_EXISTS" ] && docker_setup_db || mysql_note "Skipping docker_setup_db"
-        docker_process_init_files /docker-entrypoint-initdb.d/*
+            [ -z "$DATABASE_ALREADY_EXISTS" ] && docker_init_database_dir "$@" || mysql_note "Skipping docker_init_database_dir"
+            mysql_note "Starting temporary server"
+            docker_temp_server_start "$@"
+            mysql_note "Temporary server started."
+            [ -z "$DATABASE_ALREADY_EXISTS" ] && docker_setup_db || mysql_note "Skipping docker_setup_db"
+            docker_process_init_files /docker-entrypoint-initdb.d/*
 
-        mysql_expire_root_user
+            mysql_expire_root_user
 
-        mysql_note "Stopping temporary server"
-        docker_temp_server_stop
-        mysql_note "Temporary server stopped"
+            mysql_note "Stopping temporary server"
+            docker_temp_server_stop
+            mysql_note "Temporary server stopped"
 
-        echo
-        mysql_note "MySQL init process done. Ready for start up."
-        echo
+            echo
+            mysql_note "MySQL init process done. Ready for start up."
+            echo
+        fi
 	fi
 	[ -z $DONT_START_MYSQLD ] && exec "$@" || mysql_note "not running $1"
 }
